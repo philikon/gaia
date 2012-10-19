@@ -232,8 +232,18 @@ Icon.prototype = {
 
 /*
  * Page constructor
+ *
+ * @param {Number} id
+ *                 The ID of the page, usually a 0-based index.
+ * @param {HTMLElement} container
+ *                      The HTML to render into.
+ * @param [optional] {Aray} apps
+ *                          Initial list of app entries.
  */
-var Page = function(index) {
+function Page(id, container, apps) {
+  this.id = id;
+  this.container = container;
+  this.apps = apps;
   this.icons = {};
 };
 
@@ -241,13 +251,25 @@ Page.prototype = {
 
   /*
    * Renders a page for a list of apps
-   *
-   * @param{Array} list of apps
-   *
-   * @param{Object} target DOM element container
    */
-  render: function pg_render(apps, target) {
-    this.container = this.movableContainer = target;
+  render: function pg_render() {
+    // We're not a page backed by app data. Don't do anything.
+    if (this.id == null)
+      return;
+
+    // We render pages lazily and we might not have the app information yet.
+    // If that's the case, let's fetch it and re-enter.
+    if (!this.apps) {
+      HomeState.getAppsByPage(this.id, function onAppsByPage(apps) {
+        this.apps = apps || [];
+        for each (var app in apps) {
+          Applications.cacheIcon(app.origin, app.icon);
+        }
+        this.render();
+      }.bind(this));
+      return;
+    }
+
     var len = apps.length;
 
     this.olist = document.createElement('ol');

@@ -108,6 +108,18 @@ const HomeState = (function() {
       }, success, error);
     },
 
+    getPageCount: function st_getPageCount(callback) {
+      var count = 0;
+      function ontxnend() {
+        callback(count);
+      }
+      newTxn(GRID_STORE_NAME, 'readonly', function(txn, store) {
+        store.count().onsuccess = function onsuccess(event) {
+          count = event.target.result;
+        };
+      }, ontxnend, ontxnend);
+    },
+
     getAppsByPage: function st_getAppsByPage(iteratee, success, error) {
       if (!database) {
         if (error) {

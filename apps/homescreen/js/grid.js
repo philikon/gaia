@@ -322,7 +322,7 @@ const GridManager = (function() {
         try {
           var init = JSON.parse(xhr.responseText);
           init.grid.forEach(function(page) {
-            pageHelper.push(page);
+            pageHelper.addPage(page);
 
             for (var i = apps.length - 1; i >= 0; i--) {
               if (page.indexOf(apps[i]['origin']) != -1) {
@@ -346,13 +346,13 @@ const GridManager = (function() {
         for (var i = 0; i < apps.length; i++) {
           list.push(apps[i]);
           if (list.length === max) {
-            pageHelper.push(list);
+            pageHelper.addPage(list);
             list = [];
           }
         }
 
         if (list.length > 0) {
-          pageHelper.push(list);
+          pageHelper.addPage(list);
         }
 
         // Renders pagination bar
@@ -369,6 +369,16 @@ const GridManager = (function() {
    */
   function renderFromDB(finish) {
     var appsInDB = [];
+    HomeState.getPageCount(function onPageCount(pageCount) {
+      if (!pageCount) {
+        renderFromMozApps(finish);
+        return;
+      }
+      for (var i = 0; i < pageCount; i++) {
+        pageHelper.addPage();
+      }
+    });
+
     HomeState.getAppsByPage(
       function iterate(apps) {
         appsInDB = appsInDB.concat(apps);
@@ -376,7 +386,7 @@ const GridManager = (function() {
         for (var app in apps) {
           Applications.cacheIcon(apps[app].origin, apps[app].icon);
         }
-        pageHelper.push(apps.map(function(app) { return app.origin; }));
+        pageHelper.addPage(apps.map(function(app) { return app.origin; }));
       },
       function onsuccess(results) {
         if (results === 0) {
@@ -497,7 +507,7 @@ const GridManager = (function() {
 
       var propagateIco = page.popIcon();
       if (index === pageHelper.total() - 1) {
-        pageHelper.push([propagateIco]); // new page
+        pageHelper.addPage([propagateIco]); // new page
       } else {
         pages[index + 1].prependIcon(propagateIco); // next page
       }
@@ -505,21 +515,23 @@ const GridManager = (function() {
   }
 
   var pageHelper = {
+
+    dbOffset: 0,
+
     /*
-     * Adds a new page to the grid layout
+     * Adds a new page to the grid layout and populate
      *
      * @param {Array} initial list of apps or icons
      */
-    push: function(apps, appsFromMarket) {
+    addPage: function(apps, appsFromMarket) {
       var index = this.total();
-      var page = new Page(index);
-      pages.push(page);
 
       var pageElement = document.createElement('div');
       pageElement.className = 'page';
       container.appendChild(pageElement);
 
-      page.render(apps, pageElement);
+      var page = new Page(index, pageElement, apps);
+      pages.push(page);
 
       updatePaginationBar();
     },
@@ -545,20 +557,11 @@ const GridManager = (function() {
     },
 
     /*
-     * Saves the page state on the database
-     */
-    save: function(index) {
-      HomeState.saveGrid({
-        id: index,
-        apps: pages[index].getAppsList()
-      });
-    },
-
-    /*
      * Saves all pages state on the database
      */
     saveAll: function() {
-      HomeState.saveGrid(pages.slice(2));
+      // Pages in the database will be offset by
+      HomeState.saveGrid(pages.slice(dbOffset));
     },
 
     /*
@@ -603,10 +606,12 @@ const GridManager = (function() {
      */
     init: function gm_init(selector, finish) {
       container = document.querySelector(selector);
-      for (var i = 0; i < container.children.length; i++) {
-        var page = new Page(i);
-        page.render([], container.children[i]);
-        pages.push(page);
+      // Create stub Page objects for the special pages that are
+      // not backed by the app database. Note that this creates an
+      // offset between these indexes here and the ones in the DB.
+      // See also pageHelper.saveState().
+      for (; pageHelper.dbOffset < container.children.length; pageHelper.dbOffset++) {
+        pages.push(new Page(null, null));
       }
 
       container.addEventListener('contextmenu', handleEvent);
@@ -648,7 +653,7 @@ const GridManager = (function() {
       if (index < pageHelper.total()) {
         pages[index].append(app);
       } else {
-        pageHelper.push([app], true);
+        pageHelper.addPage([app], true);
       }
 
       if (animation) {
