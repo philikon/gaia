@@ -45,12 +45,9 @@ const HomeState = (function() {
 
         var dockStore = db.createObjectStore(DOCK_STORE_NAME,
                                              { keyPath: 'id' });
-        dockStore.createIndex('byId', 'id', { unique: true });
 
         var bookmarksStore = db.createObjectStore(BOOKMARKS_STORE_NAME,
                                                   { keyPath: 'origin' });
-        bookmarksStore.createIndex('byOrigin', 'origin', { unique: true });
-
         onUpgradeNeeded = true;
       };
     } catch (ex) {
@@ -160,8 +157,7 @@ const HomeState = (function() {
 
       var result = [];
       newTxn(DOCK_STORE_NAME, 'readonly', function(txn, store) {
-        var index = store.index('byId');
-        var request = index.get('shortcuts');
+        var request = store.get('shortcuts');
         request.onsuccess = function(event) {
           if (event.target.result) {
             result = event.target.result.shortcuts;
@@ -180,8 +176,7 @@ const HomeState = (function() {
 
       var results = [];
       newTxn(BOOKMARKS_STORE_NAME, 'readonly', function(txn, store) {
-        var index = store.index('byOrigin');
-        var request = index.openCursor();
+        var request = store.openCursor();
         request.onsuccess = function(event) {
           var cursor = event.target.result;
           if (cursor) {
