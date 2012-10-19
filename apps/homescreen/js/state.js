@@ -58,9 +58,9 @@ const HomeState = (function() {
     }
   }
 
-  function newTxn(txn_type, callback, successCb, failureCb, storeName) {
-    var txn = database.transaction([storeName || GRID_STORE_NAME], txn_type);
-    var store = txn.objectStore(storeName || GRID_STORE_NAME);
+  function newTxn(storeName, txn_type, callback, successCb, failureCb) {
+    var txn = database.transaction([storeName], txn_type);
+    var store = txn.objectStore(storeName);
 
     txn.oncomplete = function(event) {
       if (successCb) {
@@ -93,7 +93,7 @@ const HomeState = (function() {
         return;
       }
 
-      newTxn('readwrite', function(txn, store) {
+      newTxn(GRID_STORE_NAME, 'readwrite', function(txn, store) {
         if (Array.isArray(pages)) {
           store.clear();
           var len = pages.length;
@@ -120,7 +120,7 @@ const HomeState = (function() {
       }
 
       var results = 0;
-      newTxn('readonly', function(txn, store) {
+      newTxn(GRID_STORE_NAME, 'readonly', function(txn, store) {
         var index = store.index('byPage');
         var request = index.openCursor();
         request.onsuccess = function(event) {
@@ -142,12 +142,12 @@ const HomeState = (function() {
         return;
       }
 
-      newTxn('readwrite', function(txn, store) {
+      newTxn(DOCK_STORE_NAME, 'readwrite', function(txn, store) {
         store.put({
           id: 'shortcuts',
           shortcuts: list
         });
-      }, success, error, DOCK_STORE_NAME);
+      }, success, error);
     },
 
     getShortcuts: function st_getShortcuts(success, error) {
@@ -159,7 +159,7 @@ const HomeState = (function() {
       }
 
       var result = [];
-      newTxn('readonly', function(txn, store) {
+      newTxn(DOCK_STORE_NAME, 'readonly', function(txn, store) {
         var index = store.index('byId');
         var request = index.get('shortcuts');
         request.onsuccess = function(event) {
@@ -167,7 +167,7 @@ const HomeState = (function() {
             result = event.target.result.shortcuts;
           }
         };
-      }, function() { success(result) }, error, DOCK_STORE_NAME);
+      }, function() { success(result) }, error);
     },
 
     getBookmarks: function st_getBookmarks(success, error) {
@@ -179,7 +179,7 @@ const HomeState = (function() {
       }
 
       var results = [];
-      newTxn('readonly', function(txn, store) {
+      newTxn(BOOKMARKS_STORE_NAME, 'readonly', function(txn, store) {
         var index = store.index('byOrigin');
         var request = index.openCursor();
         request.onsuccess = function(event) {
@@ -189,7 +189,7 @@ const HomeState = (function() {
             cursor.continue();
           }
         };
-      }, function() { success(results) }, error, BOOKMARKS_STORE_NAME);
+      }, function() { success(results) }, error);
     },
 
     saveBookmark: function st_saveBookmark(bookmark, success, error) {
@@ -200,7 +200,7 @@ const HomeState = (function() {
         return;
       }
 
-      newTxn('readwrite', function(txn, store) {
+      newTxn(BOOKMARKS_STORE_NAME, 'readwrite', function(txn, store) {
         store.put({
           origin: bookmark.url,
           bookmark: {
@@ -209,7 +209,7 @@ const HomeState = (function() {
             name: bookmark.name
           }
         });
-      }, success, error, BOOKMARKS_STORE_NAME);
+      }, success, error);
     },
 
     deleteBookmark: function st_deleteBookmark(origin, success, error) {
@@ -220,9 +220,9 @@ const HomeState = (function() {
         return;
       }
 
-      newTxn('readwrite', function(txn, store) {
+      newTxn(BOOKMARKS_STORE_NAME, 'readwrite', function(txn, store) {
         store.delete(origin);
-      }, success, error, BOOKMARKS_STORE_NAME);
+      }, success, error);
     }
   };
 })();
