@@ -129,8 +129,8 @@ const DockManager = (function() {
   }
 
   function render(apps) {
-    dock = new Dock();
-    dock.render(apps, container);
+    dock = new Dock(container, apps);
+    dock.render();
     localize();
   }
 

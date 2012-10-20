@@ -232,9 +232,26 @@ Icon.prototype = {
 
 /*
  * Page constructor
+ *
+ * @param {Number} id
+ *                 The ID of the page, usually a 0-based index.
+ * @param {HTMLElement} container
+ *                      The HTML to render into.
+ * @param [optional] {Aray} apps
+ *                          Initial list of app entries.
  */
-var Page = function(index) {
+var Page = function(id, container, apps) {
+  this.id = id;
+  this.container = this.movableContainer = container;
+  this.apps = apps;
   this.icons = {};
+
+  if (container) {
+    container.addEventListener("gridpagevisible", function onvisible() {
+      container.removeEventListener("gridpagevisible", onvisible);
+      this.render();
+    }.bind(this));
+  }
 };
 
 Page.prototype = {
@@ -246,8 +263,12 @@ Page.prototype = {
    *
    * @param{Object} target DOM element container
    */
-  render: function pg_render(apps, target) {
-    this.container = this.movableContainer = target;
+  render: function pg_render() {
+    // We're not a page backed by app data. Don't do anything.
+    if (this.id == null)
+      return;
+
+    var apps = this.apps;
     var len = apps.length;
 
     this.olist = document.createElement('ol');
@@ -264,7 +285,7 @@ Page.prototype = {
         this.append(app);
       }
     }
-    target.appendChild(this.olist);
+    this.container.appendChild(this.olist);
   },
 
   /*
@@ -506,6 +527,12 @@ Page.prototype = {
    * Returns the number of apps
    */
   getNumApps: function pg_getNumApps() {
+console.log("philikon page", this.id, Error().stack);
+    if (!this.olist) {
+      if (!this.apps)
+        return 0;
+      return this.apps.length;
+    }
     return this.olist.children.length;
   },
 
@@ -543,8 +570,8 @@ function extend(subClass, superClass) {
   subClass.uber = superClass.prototype;
 }
 
-var Dock = function createDock() {
-  Page.call(this);
+function Dock(container, apps) {
+  Page.call(this, -1, container, apps);
 };
 
 extend(Dock, Page);
