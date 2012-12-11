@@ -345,8 +345,8 @@ var StatusBar = {
       icon.hidden = false;
 
       icon.dataset.roaming = voice.roaming;
-      if (!voice.connected && !voice.emergencyCallsOnly) {
-        // "No Network" / "Searching"
+      if (!voice.connected) {
+        // "No Network" / "Searching" / "Emergency Calls Only (REASON)"
         icon.dataset.level = -1;
 
         // Possible value of voice.state are
@@ -354,10 +354,11 @@ var StatusBar = {
         // where the later three means the phone is trying to grabbing
         // the network. See
         // https://bugzilla.mozilla.org/show_bug.cgi?id=777057
-        icon.dataset.searching = (voice.state !== 'notSearching');
+        icon.dataset.searching =
+          !voice.emergencyCallsOnly && (voice.state !== 'notSearching');
 
       } else {
-        // "Emergency Calls Only (REASON)" / "Carrier" / "Carrier (Roaming)"
+        // "Carrier" / "Carrier (Roaming)"
         icon.dataset.level = Math.ceil(voice.relSignalStrength / 20); // 0-5
       }
     },
